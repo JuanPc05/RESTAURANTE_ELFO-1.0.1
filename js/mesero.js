@@ -4,9 +4,11 @@
 // Usa la misma "base de datos" en localStorage que cajero.js y pedidos.js
 // (clave "pedidos", misma estructura de datos).
 //
-// Supuesto de flujo (ajustar si chef.js define un estado "listo" intermedio):
-//   "POR ENTREGAR" = pedidos con estado "preparando"
-//   "ENTREGADO"    = pedidos con estado "entregado"
+// Flujo de estados:
+//   cajero crea -> "preparar"
+//   chef empieza -> "preparando"
+//   chef termina -> "entregar"   <-- estos son los que ve el mesero en "POR ENTREGAR"
+//   mesero entrega -> "entregado"
 
 const CLAVE_STORAGE = "pedidos";
 
@@ -36,7 +38,8 @@ function renderizarPorEntregar() {
   const tbody = document.querySelector("#PorEntregar tbody");
   if (!tbody) return;
 
-  const pedidos = obtenerPedidos().filter((p) => p.estado === "preparando");
+  // El chef marca los pedidos listos como "entregar"; esos son los que el mesero debe llevar
+  const pedidos = obtenerPedidos().filter((p) => p.estado === "entregar");
 
   tbody.innerHTML = "";
 

@@ -41,23 +41,29 @@ async function iniciarSesion() {
         let datos = await respuesta.json();
         console.log("Sesión iniciada con éxito:", datos);
 
-        // Guardamos los datos de la sesión en el localStorage
-        localStorage.setItem("usuarioLogueado", JSON.stringify(datos));
+        // El backend devuelve los datos del usuario dentro de "user":
+        // { success, message, user: { id, user, name, rol } }
+        // Usamos datos.user y, si algún día viniera plano, el propio datos.
+        let usuario = datos.user || datos;
+
+        // Guardamos SOLO los datos del usuario en el localStorage
+        localStorage.setItem("usuarioLogueado", JSON.stringify(usuario));
 
         // Extraemos el nombre utilizando 'name', 'nombre' o el 'user' por seguridad
-        let nombreMostrar = datos.name || datos.nombre || datos.user || "Usuario";
+        let nombreMostrar = usuario.name || usuario.nombre || usuario.user || "Usuario";
         alert(`¡Bienvenido al sistema, ${nombreMostrar}!`);
 
         // Redirección según el rol de la base de datos (convertido a minúsculas)
-        let rol = datos.rol ? datos.rol.toLowerCase() : "";
+        let rol = usuario.rol ? usuario.rol.toLowerCase().trim() : "";
 
         if (rol === "cajero") {
-            window.location.href = "listado-pedidos.html"; // Pantalla de Sabas
+            window.location.href = "cajero.html"; // Pantalla del Cajero
         } else if (rol === "chef") {
-            window.location.href = "chef.html"; // Pantalla de Juan
+            window.location.href = "chef.html"; // Pantalla del Chef
         } else if (rol === "mesero") {
             window.location.href = "mesero.html"; // Pantalla del Mesero
         } else {
+            alert("Tu usuario no tiene un rol válido asignado: " + (rol || "(vacío)"));
             window.location.href = "index.html"; // Vista general si no coincide
         }
 

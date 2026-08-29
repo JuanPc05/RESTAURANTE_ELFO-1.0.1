@@ -28,6 +28,12 @@ function manejarPedido(boton) {
     return;
   }
 
+  // Necesitamos al menos una mesa registrada para poder asignarla
+  if (typeof obtenerMesas === "function" && obtenerMesas().length === 0) {
+    alert("Primero agrega al menos una mesa en el panel de Mesas.");
+    return;
+  }
+
   const pedido = construirPedido(contenedorMenu);
 
   if (!pedido) {
@@ -40,7 +46,7 @@ function manejarPedido(boton) {
   pedidos.push(pedido);
   guardarPedidos(pedidos);
 
-  alert(`Pedido #${pedido.id} registrado correctamente para ${pedido.cliente}`);
+  alert(`Pedido #${pedido.id} (Mesa ${pedido.mesa}) registrado correctamente para ${pedido.cliente}`);
   limpiarFormulario(form);
 }
 
@@ -52,8 +58,9 @@ function construirPedido(contenedorMenu) {
   const fecha = contenedorMenu.querySelector(".fecha")?.value;
   const observaciones = contenedorMenu.querySelector(".observaciones")?.value.trim();
   const precioTexto = contenedorMenu.querySelector(".precios")?.textContent;
+  const mesa = contenedorMenu.querySelector(".mesa")?.value;
 
-  if (!platillo || !cliente || !cantidad || !fecha) {
+  if (!platillo || !cliente || !cantidad || !fecha || !mesa) {
     return null;
   }
 
@@ -64,6 +71,7 @@ function construirPedido(contenedorMenu) {
     observaciones: observaciones || "",
     cliente: cliente,
     fecha: fecha,
+    mesa: parseInt(mesa, 10), // Mesa asignada por el cajero
     estado: "preparar" // Mismo valor usado en tu tabla `pedido`
   };
 }
@@ -101,5 +109,7 @@ function limpiarFormulario(form) {
   form.querySelector(".cliente").value = "";
   form.querySelector(".cantidad").value = "";
   form.querySelector(".observaciones").value = "";
+  const mesaSelect = form.querySelector(".mesa");
+  if (mesaSelect) mesaSelect.value = "";
   // El select del platillo y la fecha se dejan con su valor actual
 }

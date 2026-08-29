@@ -1,76 +1,66 @@
+// ============================================================
+// chef.js - Pedidos para el chef (rol Chef)
+// ============================================================
+// Lee los pedidos guardados en localStorage por cajero.js
+// (misma clave "pedidos" y misma estructura que pedidos.js / mesero.js).
+//
+// Antes este archivo consultaba el backend (fetch '/chef'); por eso
+// el chef NO veía los pedidos que el cajero creaba en el navegador.
+
+const CLAVE_STORAGE = "pedidos";
 
 const ESTADOS = {
-  PREPARAR:   'preparar',
-  PREPARANDO: 'preparando',
-  ENTREGAR:   'entregar',
-  ENTREGADO:  'entregado',
+  PREPARAR:   "preparar",
+  PREPARANDO: "preparando",
+  ENTREGAR:   "entregar",
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  const usuario = obtenerUsuario();
-  if (!usuario || usuario.rol?.toLowerCase() !== 'chef') {
-    location.replace('index.html');
-    return;
+document.addEventListener("DOMContentLoaded", () => {
+  const btnSalir = document.querySelector("a.btn-danger");
+  if (btnSalir) {
+    btnSalir.addEventListener("click", () => localStorage.removeItem("usuarioLogueado"));
   }
 
-  mostrarNombreUsuario(usuario);
-  configurarLogout();
-  cargarPedidos();
+  renderizarPedidos();
 });
 
-function obtenerUsuario() {
-  try {
-    const raw = localStorage.getItem('usuarioLogueado');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+// ------------------------------------------------------------
+// Capa de almacenamiento (igual que cajero.js / pedidos.js / mesero.js)
+// ------------------------------------------------------------
+
+function obtenerPedidos() {
+  const datos = localStorage.getItem(CLAVE_STORAGE);
+  return datos ? JSON.parse(datos) : [];
 }
 
-function mostrarNombreUsuario(usuario) {
-  const span = document.querySelector('#myNavbar .fw-bold');
-  if (span) span.textContent = usuario.name;
+function guardarPedidos(pedidos) {
+  localStorage.setItem(CLAVE_STORAGE, JSON.stringify(pedidos));
 }
 
+// ------------------------------------------------------------
+// Render de las tablas "POR PREPARAR" y "PREPARANDO"
+// ------------------------------------------------------------
 
-function configurarLogout() {
-  const btnSalir = document.querySelector('a.btn-danger');
-  if (!btnSalir) return;
-  btnSalir.addEventListener('click', () => {
-    localStorage.removeItem('usuarioLogueado');
+function renderizarPedidos() {
+  const pedidos = obtenerPedidos();
 
-  });
-}
-
-async function cargarPedidos() {
-  try {
-    const respuesta = await fetch('/chef');
-
-    if (!respuesta.ok) {
-      throw new Error(`El servidor respondió ${respuesta.status}`);
-    }
-
-    const pedidos = await respuesta.json();
-    renderizarPedidos(pedidos);
-  } catch (error) {
-    console.error('Error cargando pedidos:', error);
-    renderizarPedidos([]);
-  }
-}
-
-function renderizarPedidos(pedidos) {
-  const porPreparar = pedidos.filter(p => p.estado === ESTADOS.PREPARAR);
-  const preparando  = pedidos.filter(p => p.estado === ESTADOS.PREPARANDO);
-
-  llenarTabla('#PorPreparar tbody', porPreparar, ESTADOS.PREPARAR);
-  llenarTabla('#Preparando tbody',  preparando,  ESTADOS.PREPARANDO);
+  llenarTabla(
+    "#PorPreparar tbody",
+    pedidos.filter((p) => p.estado === ESTADOS.PREPARAR),
+    ESTADOS.PREPARAR
+  );
+  llenarTabla(
+    "#Preparando tbody",
+    pedidos.filter((p) => p.estado === ESTADOS.PREPARANDO),
+    ESTADOS.PREPARANDO
+  );
 }
 
 function llenarTabla(selectorTbody, pedidos, estadoActual) {
   const tbody = document.querySelector(selectorTbody);
   if (!tbody) return;
 
-  tbody.innerHTML = '';
+  tbody.innerHTML = "";
 
   if (pedidos.length === 0) {
     tbody.innerHTML = `
@@ -81,26 +71,26 @@ function llenarTabla(selectorTbody, pedidos, estadoActual) {
     return;
   }
 
-  pedidos.forEach(pedido => {
-    const fila = document.createElement('tr');
+  pedidos.forEach((pedido) => {
+    const fila = document.createElement("tr");
 
-    const tdPlatillo = document.createElement('td');
+    const tdPlatillo = document.createElement("td");
     tdPlatillo.textContent = pedido.platillo;
 
-    const tdMesa = document.createElement('td');
-    tdMesa.textContent = pedido.mesa;
+    const tdMesa = document.createElement("td");
+    tdMesa.textContent = pedido.mesa ?? 0;
 
-    const tdAccion = document.createElement('td');
-    const boton = document.createElement('button');
-    boton.className = 'btn btn-warning';
+    const tdAccion = document.createElement("td");
+    const boton = document.createElement("button");
+    boton.className = "btn btn-warning";
+    boton.type = "button";
 
     if (estadoActual === ESTADOS.PREPARAR) {
-      boton.textContent = 'Empezar';
-
-      boton.addEventListener('click', () => avanzarAPreparando(pedido.id));
+      boton.textContent = "Empezar";
+      boton.addEventListener("click", () => cambiarEstado(pedido.id, ESTADOS.PREPARANDO));
     } else {
-      boton.textContent = 'Listo para entregar';
-      boton.addEventListener('click', () => avanzarAListo(pedido.id));
+      boton.textContent = "Listo para entregar";
+      boton.addEventListener("click", () => cambiarEstado(pedido.id, ESTADOS.ENTREGAR));
     }
 
     tdAccion.appendChild(boton);
@@ -109,29 +99,13 @@ function llenarTabla(selectorTbody, pedidos, estadoActual) {
   });
 }
 
-async function avanzarAPreparando(id) {
-  await cambiarEstado('/preparando', id);
-}
+// Cambia el estado del pedido y refresca ambas tablas
+function cambiarEstado(id, nuevoEstado) {
+  const pedidos = obtenerPedidos();
+  const pedido = pedidos.find((p) => String(p.id) === String(id));
+  if (!pedido) return;
 
-async function avanzarAListo(id) {
-  await cambiarEstado('/listo', id);
-}
-
-async function cambiarEstado(endpoint, id) {
-  try {
-    const respuesta = await fetch(endpoint, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-
-    if (!respuesta.ok) {
-      throw new Error(`El servidor respondió ${respuesta.status}`);
-    }
-
-    cargarPedidos();
-  } catch (error) {
-    console.error(`Error cambiando estado en ${endpoint}:`, error);
-    alert('No se pudo actualizar el pedido. Revisa la consola.');
-  }
+  pedido.estado = nuevoEstado;
+  guardarPedidos(pedidos);
+  renderizarPedidos();
 }
