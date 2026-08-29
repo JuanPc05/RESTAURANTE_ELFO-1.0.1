@@ -1,31 +1,32 @@
-const URL_API = "http://localhost:3005";
+const URL_API = "http://localhost:3005"; 
 
-// 1. Referencias a los campos del formulario
+// 2. Referencias exactas a los IDs y clases de tu HTML de registro
 const inputUser = document.getElementById("user");
 const inputName = document.getElementById("name");
-const inputRol = document.getElementById("rol");
+const selectRol = document.getElementById("rol");
 const inputPassword = document.getElementById("password");
-const btnGuardar = document.querySelector(".btn-guardar");
+const btnGuardar = document.querySelector(".btn-guardar"); // Buscamos por la clase .btn-guardar
 
-// 2. Escuchamos el clic en el botón de Guardar Usuario
+// 3. Escuchamos el evento click en el botón de guardar
 btnGuardar.addEventListener("click", () => {
     guardarUsuario();
 });
 
-// 3. Función principal para registrar un usuario
+// 4. Función para procesar y enviar el registro
 async function guardarUsuario() {
     let userVal = inputUser.value.trim();
     let nameVal = inputName.value.trim();
-    let rolVal = inputRol.value.trim();
+    let rolVal = selectRol.value; // Captura directamente "cajero", "chef" o "mesero" [3, 4]
     let passwordVal = inputPassword.value.trim();
 
-    if (userVal === "" || nameVal === "" || rolVal === "" || passwordVal === "") {
-        alert("Por favor, completa todos los campos.");
+    // Validación de campos vacíos en el Frontend
+    if (userVal === "" || nameVal === "" || passwordVal === "") {
+        alert("Por favor, completa todos los campos obligatorios.");
         return;
     }
 
-    // Campos exactos que espera el backend en POST /register: user, name, rol, password
-    let datosEnvio = {
+    // Estructura JSON idéntica a la especificación de tu backend
+    let datosUsuario = {
         user: userVal,
         name: nameVal,
         rol: rolVal,
@@ -33,29 +34,25 @@ async function guardarUsuario() {
     };
 
     try {
+        // Petición POST al endpoint de registro
         let respuesta = await fetch(`${URL_API}/register`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(datosEnvio)
+            body: JSON.stringify(datosUsuario)
         });
 
-        let datos = await respuesta.json();
-
-        if (!respuesta.ok) {
-            // El backend manda { success:false, message:"..." } con 400/500
-            throw new Error(datos.message || "No se pudo registrar el usuario");
+        if (respuesta.ok) {
+            alert("¡Usuario registrado con éxito en el sistema!");
+            window.location.href = "login.html"; // Redirección automática al Login
+        } else {
+            let error = await respuesta.json();
+            alert(`Error en el registro: ${error.message || "No se pudo crear el usuario."}`);
         }
 
-        console.log("Usuario registrado:", datos);
-        alert(datos.message || "Usuario registrado con éxito");
-
-        // Redirigimos al login para que inicie sesión
-        window.location.href = "login.html";
-
     } catch (error) {
-        console.log("Error en el registro:", error);
-        alert("Error al registrar: " + error.message);
+        console.log("Error de conexión:", error);
+        alert("No se pudo conectar con el servidor. Asegúrate de tener el backend encendido en el puerto 3005.");
     }
 }
